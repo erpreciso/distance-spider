@@ -16,33 +16,61 @@ function create_map() {
     });
 }
 
-function placeMarkerToRoad(location){
+function placeMarkerToRoad(start, location) {
     var directionsService = new google.maps.DirectionsService();
+    var nearest_point_on_road;
     var request = {
-      origin:location,
-      destination:location,
-      travelMode: google.maps.TravelMode.DRIVING
-      };
-    directionsService.route(request,function(result, status){
-        var nearest_point_on_road = result.routes[0].legs[0].start_location;
-        placeMarker(nearest_point_on_road);
+        origin: location,
+        destination: location,
+        travelMode: google.maps.TravelMode.DRIVING
+    };
+    directionsService.route(request, function (result, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+            nearest_point_on_road = result.routes[0].legs[0].start_location;
+            placeMarker(nearest_point_on_road);      
+            if (false){
+                var request = {
+                    origin: start,
+                    destination: nearest_point_on_road,
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+                directionsService.route(request, function (result, status) {
+                    if (status == google.maps.DirectionsStatus.OK) {
+                        renderDirections(result)    
+                    }
+                });
+                function renderDirections(result) {
+                    var directionsRenderer = new google.maps.DirectionsRenderer({
+                        suppressMarkers: true
+                    });
+                    directionsRenderer.setMap(map);
+                    directionsRenderer.setDirections(result);
+                }
+        }
+        }
     });
+    
 }
 
 function placeSetMarker(location) {
-    var distance = get_user_input();
-    placeMarkerToRoad(location);
-    placeMarkerToRoad(location.destinationPoint(0, distance));
-    placeMarkerToRoad(location.destinationPoint(120, distance));
-    placeMarkerToRoad(location.destinationPoint(240, distance));
+    var distance = get_user_input().distance;
+    placeMarkerToRoad(location, location);
+    var points = get_user_input().points;
+    for (var i = 0; i < points; i++){
+        placeMarkerToRoad(location, location.destinationPoint(i * 360 / points, distance));
+    }
 }
 
-function get_user_input(){
+function get_user_input() {
     var d = $("#distance").val();
     if (d == "") {
         d = 2;
     }
-    return d;
+    var p = $("#points").val();
+    if (p == "") {
+        p = 3;
+    }
+    return {"distance": d, "points": p};
 }
 
 function placeMarker(location) {
@@ -50,8 +78,10 @@ function placeMarker(location) {
         position: location,
         map: map,
         title: "Center here!"
-        });
-    google.maps.event.addListener(marker, "click", function(event){alert(marker.getPosition());});
+    });
+    google.maps.event.addListener(marker, "click", function (event) {
+        alert(marker.getPosition());
+    });
 }
 
 google.maps.LatLng.prototype.destinationPoint = function (brng, dist) {
